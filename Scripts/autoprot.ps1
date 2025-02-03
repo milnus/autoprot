@@ -103,54 +103,62 @@ if ($approach -eq "label" -or $approach -eq "unlabel") {
 }
 
 $OutputDir = Join-Path $InputDir ((Get-Date -format 'yyyyMMdd_HHmmss') + "_" + $ExpName + "_" + $mode + "_" + $approach)
-$intermediate = "$OutputDir\intermediate_results"
-$DIAanalysis = "$PSScriptRoot\DIA_analysis"
-$conversions = "$PSScriptRoot\Conversions"
-$normalisation = "$PSScriptRoot\Normalisation"
-$quantification = "$PSScriptRoot\Quantification"
+$intermediate = Join-Path -Path $OutputDir -ChildPath "intermediate_results"
+$DIAanalysis = Join-Path -Path $PSScriptRoot -ChildPath "DIA_analysis"
+$conversions = Join-Path -Path $PSScriptRoot -ChildPath "Conversions"
+$normalisation = Join-Path -Path $PSScriptRoot -ChildPath "Normalisation"
+$quantification = Join-Path -Path $PSScriptRoot -ChildPath "Quantification"
 New-Item -ItemType Directory -Path $OutputDir | Out-Null
 New-Item -ItemType Directory -Path $intermediate | Out-Null
 
 ## Conversion of FASTA file to contain only UniProt IDs in the headers
 $fastaName = Split-Path -Path $fasta -LeafBase
-& "$conversions\fasta_conversion_onlyIDs.ps1" -InputFilePath $fasta -fastaName $fastaName -OutputDirPath $intermediate
+$conversionScriptPath = Join-Path -Path $conversions -ChildPath "fasta_conversion_onlyIDs.ps1"
+& $conversionScriptPath -InputFilePath $fasta -fastaName $fastaName -OutputDirPath $intermediate
 $fastaIDs = Join-Path $intermediate ($fastaName + "_onlyIDs.fasta")
 
 if ($osDIA) {
     ## DIA analysis using DIA-NN
     if ($mode -eq "DIA" -or $mode -eq "directDIA") {
-        $DIANNoutputDir = "$intermediate\DIANN_output"
+        $DIANNoutputDir = Join-Path -Path $intermediate -ChildPath "DIANN_output"
         New-Item -ItemType Directory -Path $DIANNoutputDir | Out-Null
 
         if ($mode -eq "DIA") {
             if ($approach -eq "label") {
-                $settings = "$DIAanalysis\DIANN_settings_arg6lys6.cfg"
+                $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_settings_arg6lys6.cfg"
             }
             else {
-                $settings = "$DIAanalysis\DIANN_settings.cfg"
+                $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_settings.cfg"
             }
-            $DIANNargsList = "--dir $InputDir --lib $SpecLib --out $DIANNoutputDir\report.tsv --fasta $fasta --cfg $settings"
+            $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
+            $DIANNargsList = "--dir $InputDir --lib $SpecLib --out $tsvReportPath --fasta $fasta --cfg $settings"
         }
         elseif ($mode -eq "directDIA") {
             if ($approach -eq "label") {
-                $SpecLibSettings = "$DIAanalysis\DIANN_settings_SpecLib_arg6lys6.cfg"
+                $SpecLibSettings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_settings_SpecLib_arg6lys6.cfg"
                 $SpecLibName = $ExpName + "_SpectralLibrary"
-                $SpecLibargsList = "--out $DIANNoutputDir\SpecLib_report.tsv --out-lib $DIANNoutputDir\$SpecLibname.tsv --fasta $fasta --cfg $SpecLibSettings"
+                $SpecLibReport = Join-Path -Path $DIANNoutputDir -ChildPath "SpecLib_report.tsv"
+                $SpeclibTsv = Join-Path -Path $DIANNoutputDir -ChildPath ($SpecLibName + ".tsv")
+                $SpecLibargsList = "--out $SpecLibReport --out-lib $SpeclibTsv --fasta $fasta --cfg $SpecLibSettings"
                 Start-Process -FilePath diann -ArgumentList $SpecLibargsList -Wait
-                $SpecLib = Join-Path $DIANNoutputDir ($SpecLibName + ".predicted.speclib")
-                $settings = "$DIAanalysis\DIANN_settings_arg6lys6.cfg"
-                $DIANNargsList = "--dir $InputDir --lib $SpecLib --out $DIANNoutputDir\report.tsv --fasta $fasta --cfg $settings"
+                $SpecLib = Join-Path -Path $DIANNoutputDir -ChildPath ($SpecLibName + ".predicted.speclib")
+                $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_settings_arg6lys6.cfg"
+                $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
+                $DIANNargsList = "--dir $InputDir --lib $SpecLib --out $tsvReportPath --fasta $fasta --cfg $settings"
             }
             else {
-                $SpecLib = Join-Path $DIANNoutputDir ($ExpName + "_SpectralLibrary.tsv")
-                $settings = "$DIAanalysis\DIANN_directDIA_settings.cfg"
-                $DIANNargsList = "--dir $InputDir --out $DIANNoutputDir\report.tsv --out-lib $SpecLib --fasta $fasta --cfg $settings"
+                $SpecLib = Join-Path -Path $DIANNoutputDir -ChildPath ($ExpName + "_SpectralLibrary.tsv")
+                $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_directDIA_settings.cfg"
+                $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
+                $DIANNargsList = "--dir $InputDir --out $tsvReportPath --out-lib $SpecLib --fasta $fasta --cfg $settings"
             }
         }
 
         Start-Process -FilePath diann -ArgumentList $DIANNargsList -Wait
-        & "$conversions\DIANNconversion.ps1" -InputFilePath "$DIANNoutputDir\report.tsv" -name $ExpName -OutputDirPath $intermediate
-        $DIANNreport = Join-Path $intermediate ($ExpName + "_DIANNreport.tsv")
+        $DiannPowerShellScript = Join-Path -Path $conversions -ChildPath "DIANNconversion.ps1"
+        $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
+        & $DiannPowerShellScript -InputFilePath $tsvReportPath -name $ExpName -OutputDirPath $intermediate
+        $DIANNreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_DIANNreport.tsv")
         $samples = Import-Csv $DIANNreport -Delimiter "`t" | Select-Object -ExpandProperty run_id -Unique
         if ($approach -eq "unlabel" -or $approach -eq "free") {$INreport = $DIANNreport}
     }
@@ -160,7 +168,7 @@ else {
     if ($mode -eq "DIA" -or $mode -eq "directDIA") {
         $fileType = ".*\.raw"
         if ($mode -eq "DIA") {
-            $settings = "$DIAanalysis\SN_DIA_settings.prop"
+            $settings = pathjoin -Path $DIAanalysis -ChildPath "SN_DIA_settings.prop"
             $SNargsList = "-d $InputDir -a $SpecLib -s $settings -o $intermediate -n $ExpName -f $fileType"
         }
         elseif ($mode -eq "directDIA") {
@@ -176,7 +184,7 @@ else {
 
         Start-Process -FilePath spectronaut -ArgumentList $SNargsList -Wait
         $SNoutputDir = (Get-ChildItem -Path $intermediate -Filter ("*" + $ExpName) -Recurse -Directory).Fullname
-        $SNreport = Join-Path $intermediate ($ExpName + "_SNreport.tsv")
+        $SNreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_SNreport.tsv")
         Copy-Item -Path (Join-Path $SNoutputDir ($ExpName + "_Report_pipeline_report (Normal).xls")) -Destination $SNreport
         $samples = Import-Csv $SNreport -Delimiter "`t" | Select-Object -ExpandProperty run_id -Unique
         if ($approach -eq "unlabel" -or $approach -eq "free") {$INreport = $SNreport}
@@ -186,8 +194,9 @@ else {
 ## Conversion of DDA results in PeptideGroups (.CSV)
 if ($mode -eq "DDA") {
     $samples = Import-Csv $totalProt -Delimiter "," | Select-Object -ExpandProperty Sample -Unique
-    & "$conversions\DDAconversion.ps1" -InputFilePath $DDAresultsFile -name $ExpName -samples $samples -OutputDirPath $intermediate
-    $PDreport = Join-Path $intermediate ($ExpName + "_PDreport.tsv")
+    $DdaPowerShellScript = Join-Path -Path $conversions -ChildPath "DDAconversion.ps1"
+    & $DdaPowerShellScript -InputFilePath $DDAresultsFile -name $ExpName -samples $samples -OutputDirPath $intermediate
+    $PDreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_PDreport.tsv")
     if ($approach -eq "unlabel" -or $approach -eq "free") {$INreport = $PDreport}
 }
 
@@ -205,9 +214,10 @@ if ($approach -eq "label") {
         $report = $PDreport
     }
 
-    & "$conversions\ISextraction.ps1" -InputFilePath $report -ISpepFilePath $ISconc -name $ExpName -samples $samples -OutputDirPath $intermediate
-    $ISreport = Join-Path $intermediate ($ExpName + "_ISpep_int.csv")
-    $NLreport = Join-Path $intermediate ($ExpName + "_NL.tsv")
+    $iSextractionPowerShellScript = Join-Path -Path $conversions -ChildPath "ISextraction.ps1"
+    & $iSextractionPowerShellScript -InputFilePath $report -ISpepFilePath $ISconc -name $ExpName -samples $samples -OutputDirPath $intermediate
+    $ISreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_ISpep_int.csv")
+    $NLreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_NL.tsv")
     $INreport = $NLreport
 }
 
@@ -215,13 +225,15 @@ if ($approach -eq "label") {
 $methods = "top","all","iBAQ","APEX","NSAF","LFAQ","xTop"
 
 ## using aLFQ - R package
-& "$conversions\Report_to_OpenSWATH.ps1" -InputFilePath $INreport -name $ExpName -OutputDirPath $intermediate
-$aLFQrscript = "$normalisation\PeptoProtInference.R"
+$OpenSwathPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_OpenSWATH.ps1"
+& $OpenSwathPowerShellScript -InputFilePath $INreport -name $ExpName -OutputDirPath $intermediate
+$aLFQrscript = Join-Path -Path $normalisation -ChildPath "PeptoProtInference.R"
 $aLFQargsList = "$aLFQrscript $intermediate $ExpName $fastaIDs"
 Start-Process -FilePath Rscript -ArgumentList $aLFQargsList -Wait
 
 ## using xTop - Python package
-& "$conversions\Report_to_xTopinput.ps1" -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $intermediate
+$TopXPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_xTopinput.ps1"
+& $TopXPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $intermediate
 $xTopInput = $ExpName + "_xTop.csv"
 $xTopPYscript = Join-Path ($env:Path -split ";" | Where-Object {$_ -match "xtop"}) "xTop_pipeline.py"
 $xTopargsList = "`"$xTopPYscript`" $xTopInput"
@@ -230,21 +242,25 @@ $xTopOutputDir = (Get-ChildItem -Path $intermediate -Filter "*export" -Recurse -
 Copy-Item -LiteralPath (Join-Path $xTopOutputDir ("[" + $xTopInput + "] Intensity xTop.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_xTop.csv"))
 
 ## using LFAQ - C++ executables and LFAQ.py wrapper
-$LFAQintermediate = "$intermediate\LFAQintermediate"
+$LFAQintermediate = Join-Path -Path $intermediate -ChildPath "LFAQintermediate"
 New-Item -ItemType Directory -Path $LFAQintermediate | Out-Null
-& "$conversions\convert_input_LFAQ.ps1" -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $LFAQintermediate
-$LFAQPYscript = "$normalisation\lfaq.py"
+$convertInputLFAQPowerShellScript = Join-Path -Path $conversions -ChildPath "convert_input_LFAQ.ps1"
+& $convertInputLFAQPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $LFAQintermediate
+$LFAQPYscript = Join-Path -Path $normalisation -ChildPath "lfaq.py"
 $LFAQexe = $env:Path -split ";" | Where-Object {$_ -match "LFAQ"}
-& "$normalisation\lfaqConcFileGeneration.ps1" -InputFilePath $INreport -OutputDirPath $LFAQintermediate
-$randomConcFile = "$LFAQintermediate\randomConcFile.csv"
+lfaqConcFileGenerationPowerShellScript = Join-Path -Path $normalisation -ChildPath "lfaqConcFileGeneration.ps1"
+& $lfaqConcFileGenerationPowerShellScript -InputFilePath $INreport -OutputDirPath $LFAQintermediate
+$randomConcFile = Join-Path -Path $LFAQintermediate -ChildPath "randomConcFile.csv"
 $identifier = Import-Csv $randomConcFile -Delimiter "`t" | Select-Object -ExpandProperty "Protein Id" -Unique | ForEach-Object {$_[0]} | Group-Object | Sort-Object Count -descending | Select-Object -ExpandProperty Name -First 1
 foreach ($sam in $samples) {
     $samFile = Join-Path $LFAQintermediate ($ExpName + "_" + $sam + ".csv")
     $LFAQargsList = "$LFAQPYscript $samFile $fastaIDs $LFAQintermediate `"$LFAQexe`" --IdentificationFileType `"PeakView`" --IdentifierOfStandardProtein `"$identifier`" --StandardProteinsFilePath $randomConcFile"
     Start-Process -FilePath python -ArgumentList $LFAQargsList -Wait
-    Rename-Item -Path "$LFAQintermediate\ProteinResultsExperimentOnlyOne.txt" -NewName ("ProteinResults_" + $sam + ".txt")
+    $ProteinResultsExperimentOnlyOneTxtFile = Join-Path -Path $LFAQintermediate -ChildPath "ProteinResultsExperimentOnlyOne.txt"
+    Rename-Item -Path $ProteinResultsExperimentOnlyOneTxtFile -NewName ("ProteinResults_" + $sam + ".txt")
 }
-& "$conversions\convert_output_LFAQ.ps1" -InputFilesPath $LFAQintermediate -name $ExpName -samples $samples
+$ConvertOutputLFAQ = Join-Path -Path $conversions -ChildPath "convert_output_LFAQ.ps1"
+& $ConvertOutputLFAQ -InputFilesPath $LFAQintermediate -name $ExpName -samples $samples
 Copy-Item -Path (Join-Path $LFAQintermediate ($ExpName + "_prot_int_LFAQ.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_LFAQ.csv"))
 
 ## Absolute quantification using label, unlabelled, or standard-free approach
@@ -259,7 +275,7 @@ elseif ($approach -eq "free") {
     $AQargsList = "$AQPYscript --label `"free`" --name $ExpName --inDir $intermediate --sam $samples --met $methods --tot $totalProt --fasta $fastaIDs"
 }
 Start-Process -FilePath python -ArgumentList $AQargsList -Wait
-$AQoutputDir = "$intermediate\Absolute_quantification"
+$AQoutputDir = Join-Path -Path $intermediate -ChildPath "Absolute_quantification"
 foreach ($m in $methods) {
     $outputFileName = $ExpName + "_prot_conc_" + $m + ".csv"
     Copy-Item -Path (Join-Path $AQoutputDir $outputFileName) -Destination (Join-Path $OutputDir $outputFileName)
