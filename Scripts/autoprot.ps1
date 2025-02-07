@@ -103,19 +103,28 @@ if ($approach -eq "label" -or $approach -eq "unlabel") {
 }
 
 $OutputDir = Join-Path $InputDir ((Get-Date -format 'yyyyMMdd_HHmmss') + "_" + $ExpName + "_" + $mode + "_" + $approach)
+echo "OutputDir: $OutputDir"
 $intermediate = Join-Path -Path $OutputDir -ChildPath "intermediate_results"
+echo "intermediate: $intermediate"
 $DIAanalysis = Join-Path -Path $PSScriptRoot -ChildPath "DIA_analysis"
+echo "DIAanalysis: $DIAanalysis"
 $conversions = Join-Path -Path $PSScriptRoot -ChildPath "Conversions"
+echo "conversions: $conversions"
 $normalisation = Join-Path -Path $PSScriptRoot -ChildPath "Normalisation"
+echo "normalisation: $normalisation"
 $quantification = Join-Path -Path $PSScriptRoot -ChildPath "Quantification"
+echo "quantification: $quantification"
 New-Item -ItemType Directory -Path $OutputDir | Out-Null
 New-Item -ItemType Directory -Path $intermediate | Out-Null
 
 ## Conversion of FASTA file to contain only UniProt IDs in the headers
 $fastaName = Split-Path -Path $fasta -LeafBase
+echo "fastaName: $fastaName"
 $conversionScriptPath = Join-Path -Path $conversions -ChildPath "fasta_conversion_onlyIDs.ps1"
+echo "conversionScriptPath: $conversionScriptPath"
 & $conversionScriptPath -InputFilePath $fasta -fastaName $fastaName -OutputDirPath $intermediate
 $fastaIDs = Join-Path $intermediate ($fastaName + "_onlyIDs.fasta")
+echo "fastaIDs: $fastaIDs"
 
 if ($osDIA) {
     ## DIA analysis using DIA-NN
@@ -145,6 +154,7 @@ if ($osDIA) {
                 $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_settings_arg6lys6.cfg"
                 $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
                 $DIANNargsList = "--dir $InputDir --lib $SpecLib --out $tsvReportPath --fasta $fasta --cfg $settings"
+                echo "DIANNargsList: $DIANNargsList"
             }
             else {
                 $SpecLib = Join-Path -Path $DIANNoutputDir -ChildPath ($ExpName + "_SpectralLibrary.tsv")
@@ -158,9 +168,12 @@ if ($osDIA) {
         Start-Process -FilePath diann -ArgumentList $DIANNargsList -Wait
         "[autoprot.ps1] - Done with DIA-NN analysis"
         $DiannPowerShellScript = Join-Path -Path $conversions -ChildPath "DIANNconversion.ps1"
+        echo "DiannPowerShellScript: $DiannPowerShellScript"
         $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
+        echo "tsvReportPath: $tsvReportPath"
         & $DiannPowerShellScript -InputFilePath $tsvReportPath -name $ExpName -OutputDirPath $intermediate
         $DIANNreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_DIANNreport.tsv")
+        echo "DIANNreport: $DIANNreport"
         "[autoprot.ps1] - Start import of DIA-NN csv"
         $samples = Import-Csv $DIANNreport -Delimiter "`t" | Select-Object -ExpandProperty run_id -Unique
         "[autoprot.ps1] - End import of DIA-NN csv"
