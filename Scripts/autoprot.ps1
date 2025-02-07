@@ -255,6 +255,7 @@ $methods = "xTop" # New line narrowing down the normalisation methods to be used
 $TopXPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_xTopinput.ps1"
 echo "TopXPowerShellScript: $TopXPowerShellScript"
 "[autoprot.ps1] - Staring Report_to_xTopinput.ps1 "
+echo "INreport: $INreport"
 & $TopXPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $intermediate
 "[autoprot.ps1] - End Report_to_xTopinput.ps1 "
 $xTopInput = $ExpName + "_xTop.csv"
