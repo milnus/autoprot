@@ -253,9 +253,14 @@ $methods = "xTop" # New line narrowing down the normalisation methods to be used
 ## using xTop - Python package
 "[autoprot.ps1] - Starting xTop normalisation"
 $TopXPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_xTopinput.ps1"
+echo "TopXPowerShellScript: $TopXPowerShellScript"
+"[autoprot.ps1] - Staring Report_to_xTopinput.ps1 "
 & $TopXPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $intermediate
+"[autoprot.ps1] - End Report_to_xTopinput.ps1 "
 $xTopInput = $ExpName + "_xTop.csv"
+"[autoprot.ps1] - Determining xTop script path"
 $xTopPYscript = Join-Path ($env:Path -split ";" | Where-Object {$_ -match "xtop"}) "xTop_pipeline.py"
+"[autoprot.ps1] - Found xTop script path: $xTopPYscript"
 $xTopargsList = "`"$xTopPYscript`" $xTopInput"
 "[autoprot.ps1] - Running xTop normalisation method specification"
 Start-Process -FilePath python -ArgumentList $xTopargsList -WorkingDirectory $intermediate -Wait
