@@ -222,14 +222,15 @@ if ($approach -eq "label") {
 }
 
 ## Normalisation using Top3, Topall, iBAQ, APEX, NSAF, xTop or LFAQ
-$methods = "top","all","iBAQ","APEX","NSAF","LFAQ","xTop"
+# $methods = "top","all","iBAQ","APEX","NSAF","LFAQ","xTop" # Original line setting all normalisation methods to be used
+$methods = "xTop" # New line narrowing down the normalisation methods to be used
 
 ## using aLFQ - R package
-$OpenSwathPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_OpenSWATH.ps1"
-& $OpenSwathPowerShellScript -InputFilePath $INreport -name $ExpName -OutputDirPath $intermediate
-$aLFQrscript = Join-Path -Path $normalisation -ChildPath "PeptoProtInference.R"
-$aLFQargsList = "$aLFQrscript $intermediate $ExpName $fastaIDs"
-Start-Process -FilePath Rscript -ArgumentList $aLFQargsList -Wait
+# $OpenSwathPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_OpenSWATH.ps1"
+# & $OpenSwathPowerShellScript -InputFilePath $INreport -name $ExpName -OutputDirPath $intermediate
+# $aLFQrscript = Join-Path -Path $normalisation -ChildPath "PeptoProtInference.R"
+# $aLFQargsList = "$aLFQrscript $intermediate $ExpName $fastaIDs"
+# Start-Process -FilePath Rscript -ArgumentList $aLFQargsList -Wait
 
 ## using xTop - Python package
 $TopXPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_xTopinput.ps1"
@@ -242,26 +243,26 @@ $xTopOutputDir = (Get-ChildItem -Path $intermediate -Filter "*export" -Recurse -
 Copy-Item -LiteralPath (Join-Path $xTopOutputDir ("[" + $xTopInput + "] Intensity xTop.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_xTop.csv"))
 
 ## using LFAQ - C++ executables and LFAQ.py wrapper
-$LFAQintermediate = Join-Path -Path $intermediate -ChildPath "LFAQintermediate"
-New-Item -ItemType Directory -Path $LFAQintermediate | Out-Null
-$convertInputLFAQPowerShellScript = Join-Path -Path $conversions -ChildPath "convert_input_LFAQ.ps1"
-& $convertInputLFAQPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $LFAQintermediate
-$LFAQPYscript = Join-Path -Path $normalisation -ChildPath "lfaq.py"
-$LFAQexe = $env:Path -split ";" | Where-Object {$_ -match "LFAQ"}
-lfaqConcFileGenerationPowerShellScript = Join-Path -Path $normalisation -ChildPath "lfaqConcFileGeneration.ps1"
-& $lfaqConcFileGenerationPowerShellScript -InputFilePath $INreport -OutputDirPath $LFAQintermediate
-$randomConcFile = Join-Path -Path $LFAQintermediate -ChildPath "randomConcFile.csv"
-$identifier = Import-Csv $randomConcFile -Delimiter "`t" | Select-Object -ExpandProperty "Protein Id" -Unique | ForEach-Object {$_[0]} | Group-Object | Sort-Object Count -descending | Select-Object -ExpandProperty Name -First 1
-foreach ($sam in $samples) {
-    $samFile = Join-Path $LFAQintermediate ($ExpName + "_" + $sam + ".csv")
-    $LFAQargsList = "$LFAQPYscript $samFile $fastaIDs $LFAQintermediate `"$LFAQexe`" --IdentificationFileType `"PeakView`" --IdentifierOfStandardProtein `"$identifier`" --StandardProteinsFilePath $randomConcFile"
-    Start-Process -FilePath python -ArgumentList $LFAQargsList -Wait
-    $ProteinResultsExperimentOnlyOneTxtFile = Join-Path -Path $LFAQintermediate -ChildPath "ProteinResultsExperimentOnlyOne.txt"
-    Rename-Item -Path $ProteinResultsExperimentOnlyOneTxtFile -NewName ("ProteinResults_" + $sam + ".txt")
-}
-$ConvertOutputLFAQ = Join-Path -Path $conversions -ChildPath "convert_output_LFAQ.ps1"
-& $ConvertOutputLFAQ -InputFilesPath $LFAQintermediate -name $ExpName -samples $samples
-Copy-Item -Path (Join-Path $LFAQintermediate ($ExpName + "_prot_int_LFAQ.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_LFAQ.csv"))
+# $LFAQintermediate = Join-Path -Path $intermediate -ChildPath "LFAQintermediate"
+# New-Item -ItemType Directory -Path $LFAQintermediate | Out-Null
+# $convertInputLFAQPowerShellScript = Join-Path -Path $conversions -ChildPath "convert_input_LFAQ.ps1"
+# & $convertInputLFAQPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $LFAQintermediate
+# $LFAQPYscript = Join-Path -Path $normalisation -ChildPath "lfaq.py"
+# $LFAQexe = $env:Path -split ";" | Where-Object {$_ -match "LFAQ"}
+# lfaqConcFileGenerationPowerShellScript = Join-Path -Path $normalisation -ChildPath "lfaqConcFileGeneration.ps1"
+# & $lfaqConcFileGenerationPowerShellScript -InputFilePath $INreport -OutputDirPath $LFAQintermediate
+# $randomConcFile = Join-Path -Path $LFAQintermediate -ChildPath "randomConcFile.csv"
+# $identifier = Import-Csv $randomConcFile -Delimiter "`t" | Select-Object -ExpandProperty "Protein Id" -Unique | ForEach-Object {$_[0]} | Group-Object | Sort-Object Count -descending | Select-Object -ExpandProperty Name -First 1
+# foreach ($sam in $samples) {
+#     $samFile = Join-Path $LFAQintermediate ($ExpName + "_" + $sam + ".csv")
+#     $LFAQargsList = "$LFAQPYscript $samFile $fastaIDs $LFAQintermediate `"$LFAQexe`" --IdentificationFileType `"PeakView`" --IdentifierOfStandardProtein `"$identifier`" --StandardProteinsFilePath $randomConcFile"
+#     Start-Process -FilePath python -ArgumentList $LFAQargsList -Wait
+#     $ProteinResultsExperimentOnlyOneTxtFile = Join-Path -Path $LFAQintermediate -ChildPath "ProteinResultsExperimentOnlyOne.txt"
+#     Rename-Item -Path $ProteinResultsExperimentOnlyOneTxtFile -NewName ("ProteinResults_" + $sam + ".txt")
+# }
+# $ConvertOutputLFAQ = Join-Path -Path $conversions -ChildPath "convert_output_LFAQ.ps1"
+# & $ConvertOutputLFAQ -InputFilesPath $LFAQintermediate -name $ExpName -samples $samples
+# Copy-Item -Path (Join-Path $LFAQintermediate ($ExpName + "_prot_int_LFAQ.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_LFAQ.csv"))
 
 ## Absolute quantification using label, unlabelled, or standard-free approach
 $AQPYscript = "$quantification\AbsQuant.py"
