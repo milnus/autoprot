@@ -154,12 +154,16 @@ if ($osDIA) {
             }
         }
 
+        "[autoprot.ps1] - Starting DIA-NN analysis"
         Start-Process -FilePath diann -ArgumentList $DIANNargsList -Wait
+        "[autoprot.ps1] - Done with DIA-NN analysis"
         $DiannPowerShellScript = Join-Path -Path $conversions -ChildPath "DIANNconversion.ps1"
         $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
         & $DiannPowerShellScript -InputFilePath $tsvReportPath -name $ExpName -OutputDirPath $intermediate
         $DIANNreport = Join-Path -Path $intermediate -ChildPath ($ExpName + "_DIANNreport.tsv")
+        "[autoprot.ps1] - Start import of DIA-NN csv"
         $samples = Import-Csv $DIANNreport -Delimiter "`t" | Select-Object -ExpandProperty run_id -Unique
+        "[autoprot.ps1] - End import of DIA-NN csv"
         if ($approach -eq "unlabel" -or $approach -eq "free") {$INreport = $DIANNreport}
     }
 }
@@ -223,6 +227,7 @@ if ($approach -eq "label") {
 
 ## Normalisation using Top3, Topall, iBAQ, APEX, NSAF, xTop or LFAQ
 # $methods = "top","all","iBAQ","APEX","NSAF","LFAQ","xTop" # Original line setting all normalisation methods to be used
+"[autoprot.ps1] - Reached normalisation method specification"
 $methods = "xTop" # New line narrowing down the normalisation methods to be used
 
 ## using aLFQ - R package
@@ -233,12 +238,15 @@ $methods = "xTop" # New line narrowing down the normalisation methods to be used
 # Start-Process -FilePath Rscript -ArgumentList $aLFQargsList -Wait
 
 ## using xTop - Python package
+"[autoprot.ps1] - Starting xTop normalisation"
 $TopXPowerShellScript = Join-Path -Path $conversions -ChildPath "Report_to_xTopinput.ps1"
 & $TopXPowerShellScript -InputFilePath $INreport -name $ExpName -samples $samples -OutputDirPath $intermediate
 $xTopInput = $ExpName + "_xTop.csv"
 $xTopPYscript = Join-Path ($env:Path -split ";" | Where-Object {$_ -match "xtop"}) "xTop_pipeline.py"
 $xTopargsList = "`"$xTopPYscript`" $xTopInput"
+"[autoprot.ps1] - Running xTop normalisation method specification"
 Start-Process -FilePath python -ArgumentList $xTopargsList -WorkingDirectory $intermediate -Wait
+"[autoprot.ps1] - End xTop normalisation method specification"
 $xTopOutputDir = (Get-ChildItem -Path $intermediate -Filter "*export" -Recurse -Directory).Fullname
 Copy-Item -LiteralPath (Join-Path $xTopOutputDir ("[" + $xTopInput + "] Intensity xTop.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_xTop.csv"))
 
@@ -265,6 +273,7 @@ Copy-Item -LiteralPath (Join-Path $xTopOutputDir ("[" + $xTopInput + "] Intensit
 # Copy-Item -Path (Join-Path $LFAQintermediate ($ExpName + "_prot_int_LFAQ.csv")) -Destination (Join-Path $intermediate ($ExpName + "_prot_int_LFAQ.csv"))
 
 ## Absolute quantification using label, unlabelled, or standard-free approach
+"[autoprot.ps1] - Reached absolute quantification section"
 $AQPYscript = "$quantification\AbsQuant.py"
 if ($approach -eq "label") {
     $AQargsList = "$AQPYscript --label `"label`" --name $ExpName --inDir $intermediate --sam $samples --met $methods --tot $totalProt --Sint $ISreport --Sconc $ISconc"
