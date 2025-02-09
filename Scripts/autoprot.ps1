@@ -159,6 +159,7 @@ if ($osDIA) {
             else {
                 $SpecLib = Join-Path -Path $DIANNoutputDir -ChildPath ($ExpName + "_SpectralLibrary.tsv")
                 $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_directDIA_settings.cfg"
+                echo "settings: $settings"
                 $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
                 $DIANNargsList = "--dir $InputDir --out $tsvReportPath --out-lib $SpecLib --fasta $fasta --cfg $settings"
             }

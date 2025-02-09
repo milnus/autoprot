@@ -35,4 +35,5 @@ $results = $results | Group-Object FullPeptideName | ForEach-Object {
 	foreach ($prop in $objectCur.PSObject.Properties) {if ($prop.Value) {$count++}}
 	if ($count -ge 5) {$objectCur}
 }
+echo "results: $results"
 $results | Export-Csv $OutputFilePath -Delimiter "," -UseQuotes Never -NoTypeInformation
