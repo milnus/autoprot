@@ -158,7 +158,7 @@ if ($osDIA) {
             }
             else {
                 $SpecLib = Join-Path -Path $DIANNoutputDir -ChildPath ($ExpName + "_SpectralLibrary.tsv")
-                $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_directDIA_settings.cfg"
+                $settings = Join-Path -Path $DIAanalysis -ChildPath "DIANN_directDIA_settings.cfg--" # The tailing -- fixes a known bug the is due to tailing whitespace https://github.com/vdemichev/DiaNN/issues/641
                 echo "settings: $settings"
                 $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
                 $DIANNargsList = "--dir $InputDir --out $tsvReportPath --out-lib $SpecLib --fasta $fasta --cfg $settings"
