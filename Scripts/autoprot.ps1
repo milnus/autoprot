@@ -312,3 +312,5 @@ foreach ($m in $methods) {
     $outputFileName = $ExpName + "_prot_conc_" + $m + ".csv"
     Copy-Item -Path (Join-Path $AQoutputDir $outputFileName) -Destination (Join-Path $OutputDir $outputFileName)
 }
+
+"End of script!"
