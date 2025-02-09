@@ -296,7 +296,7 @@ Copy-Item -LiteralPath (Join-Path $xTopOutputDir ("[" + $xTopInput + "] Intensit
 
 ## Absolute quantification using label, unlabelled, or standard-free approach
 "[autoprot.ps1] - Reached absolute quantification section"
-$AQPYscript = "$quantification\AbsQuant.py"
+$AQPYscript = Join-Path -Path $quantification -ChildPath "AbsQuant.py"
 if ($approach -eq "label") {
     $AQargsList = "$AQPYscript --label `"label`" --name $ExpName --inDir $intermediate --sam $samples --met $methods --tot $totalProt --Sint $ISreport --Sconc $ISconc"
 }
