@@ -162,6 +162,7 @@ if ($osDIA) {
                 echo "settings: $settings"
                 $tsvReportPath = Join-Path -Path $DIANNoutputDir -ChildPath "report.tsv"
                 $DIANNargsList = "--dir $InputDir --out $tsvReportPath --out-lib $SpecLib --fasta $fasta --cfg $settings"
+                echo "DIANNargsList: $DIANNargsList"
             }
         }
 
